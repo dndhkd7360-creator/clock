@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>데스크톱 시계</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Inter & Orbitron for Digital Clock) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        digital: ['Orbitron', 'sans-serif'],
+                    },
+                    colors: {
+                        clockBgDark: '#0f172a',
+                        clockCardDark: '#1e293b',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 추가 애니메이션 및 스타일 */
+        .clock-hand {
+            transform-origin: 50% 100%;
+            transition: transform 0.05s cubic-bezier(0.4, 2.08, 0.55, 0.44);
+        }
+        .smooth-hand {
+            transition: transform 0.2s linear;
+        }
+    </style>
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col justify-between transition-colors duration-300 select-none overflow-hidden font-sans">
+
+    <!-- 상단 툴바 / 메뉴 -->
+    <header class="p-4 flex justify-between items-center z-10">
+        <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-clock text-white text-xl"></i>
+            <span class="font-bold text-lg tracking-wide hidden sm:inline text-white">My Clock</span>
+        </div>
+
+        <!-- 탭 및 모드 전환 -->
+        <div class="flex items-center space-x-1 sm:space-x-2 bg-zinc-900 p-1 rounded-xl border border-zinc-800 text-sm">
+            <button id="tab-clock" onclick="switchTab('clock')" class="px-3 py-1.5 rounded-lg font-medium transition-all bg-zinc-800 text-white shadow-sm">시계</button>
+            <button id="tab-stopwatch" onclick="switchTab('stopwatch')" class="px-3 py-1.5 rounded-lg font-medium transition-all text-zinc-400 hover:text-white">스톱워치</button>
+            <button id="tab-timer" onclick="switchTab('timer')" class="px-3 py-1.5 rounded-lg font-medium transition-all text-zinc-400 hover:text-white">타이머</button>
+        </div>
+
+        <!-- 우측 액션 버튼들 -->
+        <div class="flex items-center space-x-2">
+            <!-- 시계 타입 변경 (디지털/아날로그) -->
+            <button id="toggle-type-btn" onclick="toggleClockType()" class="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 transition" title="시계 형태 변경">
+                <i class="fa-solid fa-sync text-white"></i>
+            </button>
+            <!-- 전체화면 토글 -->
+            <button onclick="toggleFullscreen()" class="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 transition hidden sm:flex" title="전체화면">
+                <i id="fullscreen-icon" class="fa-solid fa-expand text-white"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- 메인 콘텐츠 영역 -->
+    <main class="flex-grow flex flex-col items-center justify-center p-4 relative">
+
+        <!-- 1. 시계 뷰 (Main Clock) -->
+        <section id="view-clock" class="flex flex-col items-center justify-center w-full max-w-4xl transition-opacity duration-300">
+            
+            <!-- 디지털 시계 -->
+            <div id="digital-clock" class="flex flex-col items-center justify-center text-center">
+                <!-- 날짜 및 요일 -->
+                <div id="date-display" class="text-lg sm:text-2xl md:text-3xl font-medium text-zinc-400 mb-2 tracking-widest">
+                    2026년 10월 27일 화요일
+                </div>
+
+                <!-- 시간 (HH:MM:SS) -->
+                <div class="relative flex items-baseline justify-center font-digital">
+                    <span id="time-display" class="text-6xl sm:text-8xl md:text-9xl font-bold tracking-wider text-white">
+                        12:00:00
+                    </span>
+                    <span id="ampm-display" class="text-xl sm:text-3xl font-sans font-bold ml-3 text-zinc-400">
+                        AM
+                    </span>
+                </div>
+
+                <!-- 12/24시간제 및 초 표시 토글 옵션 -->
+                <div class="mt-8 flex items-center space-x-4 bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-full text-xs sm:text-sm text-zinc-300">
+                    <label class="flex items-center cursor-pointer space-x-2">
+                        <input type="checkbox" id="toggle-24h" onchange="updateClockSettings()" class="rounded bg-zinc-800 border-zinc-700 text-white focus:ring-0">
+                        <span>24시간제</span>
+                    </label>
+                    <span class="text-zinc-700">|</span>
+                    <label class="flex items-center cursor-pointer space-x-2">
+                        <input type="checkbox" id="toggle-seconds" checked onchange="updateClockSettings()" class="rounded bg-zinc-800 border-zinc-700 text-white focus:ring-0">
+                        <span>초 표시</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 아날로그 시계 (기본 숨김) -->
+            <div id="analog-clock" class="hidden flex-col items-center justify-center">
+                <div class="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-full border-4 border-zinc-800 bg-black shadow-2xl flex items-center justify-center">
+                    
+                    <!-- 시계 눈금들 -->
+                    <div class="absolute inset-0 flex items-center justify-center text-white">
+                        <span class="absolute top-3 font-bold text-lg">12</span>
+                        <span class="absolute right-4 font-bold text-lg">3</span>
+                        <span class="absolute bottom-3 font-bold text-lg">6</span>
+                        <span class="absolute left-4 font-bold text-lg">9</span>
+                    </div>
+
+                    <!-- 중앙 정점 -->
+                    <div class="w-4 h-4 bg-white rounded-full z-30 shadow"></div>
+
+                    <!-- 시침 -->
+                    <div id="hour-hand" class="absolute w-1.5 h-16 sm:h-20 md:h-24 bg-white rounded-full clock-hand z-10 bottom-1/2"></div>
+                    <!-- 분침 -->
+                    <div id="minute-hand" class="absolute w-1 h-24 sm:h-28 md:h-36 bg-zinc-400 rounded-full clock-hand z-20 bottom-1/2"></div>
+                    <!-- 초침 -->
+                    <div id="second-hand" class="absolute w-0.5 h-28 sm:h-32 md:h-40 bg-white rounded-full clock-hand z-20 bottom-1/2"></div>
+                </div>
+
+                <div id="analog-date" class="mt-6 text-base sm:text-xl font-medium text-zinc-400">
+                    --
+                </div>
+            </div>
+
+        </section>
+
+        <!-- 2. 스톱워치 뷰 -->
+        <section id="view-stopwatch" class="hidden flex-col items-center justify-center w-full max-w-lg transition-opacity duration-300">
+            <div class="font-digital text-5xl sm:text-7xl font-bold mb-8 text-white" id="sw-display">
+                00:00.00
+            </div>
+            
+            <div class="flex space-x-4 mb-6">
+                <button id="sw-start-btn" onclick="toggleStopwatch()" class="w-24 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold rounded-xl shadow transition active:scale-95">
+                    시작
+                </button>
+                <button id="sw-lap-btn" onclick="lapStopwatch()" disabled class="w-24 py-3 bg-zinc-900 border border-zinc-800 text-zinc-600 font-bold rounded-xl shadow transition opacity-50 cursor-not-allowed">
+                    랩
+                </button>
+                <button onclick="resetStopwatch()" class="w-24 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold rounded-xl shadow transition active:scale-95">
+                    리셋
+                </button>
+            </div>
+
+            <!-- 랩 타임 리스트 -->
+            <div id="sw-laps" class="w-full max-h-48 overflow-y-auto space-y-2 pr-2 text-sm">
+                <!-- 랩 데이터 입력 위치 -->
+            </div>
+        </section>
+
+        <!-- 3. 타이머 뷰 -->
+        <section id="view-timer" class="hidden flex-col items-center justify-center w-full max-w-lg transition-opacity duration-300">
+            <!-- 타이머 입력 창 (정지 시) -->
+            <div id="timer-inputs" class="flex items-center space-x-2 text-3xl font-digital mb-8 text-white">
+                <input type="number" id="timer-min" min="0" max="99" value="05" class="w-20 sm:w-24 text-center p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-white focus:outline-none focus:border-zinc-500">
+                <span>:</span>
+                <input type="number" id="timer-sec" min="0" max="59" value="00" class="w-20 sm:w-24 text-center p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-white focus:outline-none focus:border-zinc-500">
+            </div>
+
+            <!-- 타이머 디스플레이 (작동 시) -->
+            <div id="timer-display" class="hidden font-digital text-6xl sm:text-8xl font-bold mb-8 text-white">
+                05:00
+            </div>
+
+            <div class="flex space-x-4">
+                <button id="timer-start-btn" onclick="toggleTimer()" class="w-28 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold rounded-xl shadow transition active:scale-95">
+                    시작
+                </button>
+                <button onclick="resetTimer()" class="w-28 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold rounded-xl shadow transition active:scale-95">
+                    리셋
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 하단 정보 -->
+    <footer class="p-4 text-center text-xs text-zinc-600">
+        Desktop Clock Application &copy; 2026
+    </footer>
+
+    <!-- 자바스크립트 로직 -->
+    <script>
+        // State 관리
+        let isAnalog = false;
+        let use24Hour = false;
+        let showSeconds = true;
+
+        // 1. 시계 로직 (Clock Logic)
+        function updateClock() {
+            const now = new Date();
+            
+            // 날짜 설정
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            const dateStr = now.toLocaleDateString('ko-KR', options);
+            document.getElementById('date-display').textContent = dateStr;
+            document.getElementById('analog-date').textContent = dateStr;
+
+            // 시간 설정 (디지털)
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            let ampm = '';
+
+            if (!use24Hour) {
+                ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12; // 0시는 12시로 표시
+            }
+            const hoursStr = String(hours).padStart(2, '0');
+
+            let timeString = `${hoursStr}:${minutes}`;
+            if (showSeconds) {
+                timeString += `:${seconds}`;
+            }
+
+            document.getElementById('time-display').textContent = timeString;
+            document.getElementById('ampm-display').textContent = use24Hour ? '' : ampm;
+
+            // 시간 설정 (아날로그)
+            const secDeg = (now.getSeconds() / 60) * 360;
+            const minDeg = ((now.getMinutes() + now.getSeconds() / 60) / 60) * 360;
+            const hourDeg = (((now.getHours() % 12) + now.getMinutes() / 60) / 12) * 360;
+
+            document.getElementById('second-hand').style.transform = `rotate(${secDeg}deg)`;
+            document.getElementById('minute-hand').style.transform = `rotate(${minDeg}deg)`;
+            document.getElementById('hour-hand').style.transform = `rotate(${hourDeg}deg)`;
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function toggleClockType() {
+            isAnalog = !isAnalog;
+            const digitalEl = document.getElementById('digital-clock');
+            const analogEl = document.getElementById('analog-clock');
+
+            if (isAnalog) {
+                digitalEl.classList.add('hidden');
+                analogEl.classList.remove('hidden');
+                analogEl.classList.add('flex');
+            } else {
+                analogEl.classList.add('hidden');
+                analogEl.classList.remove('flex');
+                digitalEl.classList.remove('hidden');
+            }
+        }
+
+        function updateClockSettings() {
+            use24Hour = document.getElementById('toggle-24h').checked;
+            showSeconds = document.getElementById('toggle-seconds').checked;
+            updateClock();
+        }
+
+        // 2. 탭 전환
+        function switchTab(tab) {
+            const views = ['clock', 'stopwatch', 'timer'];
+            views.forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                const btn = document.getElementById(`tab-${v}`);
+                if (v === tab) {
+                    el.classList.remove('hidden');
+                    el.classList.add('flex');
+                    btn.className = "px-3 py-1.5 rounded-lg font-medium transition-all bg-zinc-800 text-white shadow-sm";
+                } else {
+                    el.classList.add('hidden');
+                    el.classList.remove('flex');
+                    btn.className = "px-3 py-1.5 rounded-lg font-medium transition-all text-zinc-400 hover:text-white";
+                }
+            });
+        }
+
+        // 3. 전체화면 토글
+        function toggleFullscreen() {
+            const icon = document.getElementById('fullscreen-icon');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+                icon.className = 'fa-solid fa-compress text-white';
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    icon.className = 'fa-solid fa-expand text-white';
+                }
+            }
+        }
+
+        // 4. 스톱워치 로직
+        let swInterval = null;
+        let swElapsedTime = 0;
+        let swIsRunning = false;
+        let lapCount = 0;
+
+        function formatStopwatchTime(ms) {
+            const totalSec = Math.floor(ms / 1000);
+            const minutes = String(Math.floor(totalSec / 60)).padStart(2, '0');
+            const seconds = String(totalSec % 60).padStart(2, '0');
+            const hundredths = String(Math.floor((ms % 1000) / 10)).padStart(2, '0');
+            return `${minutes}:${seconds}.${hundredths}`;
+        }
+
+        function toggleStopwatch() {
+            const startBtn = document.getElementById('sw-start-btn');
+            const lapBtn = document.getElementById('sw-lap-btn');
+
+            if (swIsRunning) {
+                // Pause
+                clearInterval(swInterval);
+                swIsRunning = false;
+                startBtn.textContent = '시작';
+                startBtn.className = 'w-24 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold rounded-xl shadow transition active:scale-95';
+                lapBtn.disabled = true;
+                lapBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                // Start
+                const startTime = Date.now() - swElapsedTime;
+                swInterval = setInterval(() => {
+                    swElapsedTime = Date.now() - startTime;
+                    document.getElementById('sw-display').textContent = formatStopwatchTime(swElapsedTime);
+                }, 10);
+                swIsRunning = true;
+                startBtn.textContent = '정지';
+                startBtn.className = 'w-24 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold rounded-xl shadow transition active:scale-95';
+                lapBtn.disabled = false;
+                lapBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function lapStopwatch() {
+            if (!swIsRunning) return;
+            lapCount++;
+            const lapTimeStr = formatStopwatchTime(swElapsedTime);
+            const lapsContainer = document.getElementById('sw-laps');
+            
+            const lapItem = document.createElement('div');
+            lapItem.className = 'flex justify-between items-center p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-white';
+            lapItem.innerHTML = `<span class="text-zinc-500">랩 ${lapCount}</span><span class="font-digital font-bold">${lapTimeStr}</span>`;
+            
+            lapsContainer.prepend(lapItem);
+        }
+
+        function resetStopwatch() {
+            clearInterval(swInterval);
+            swElapsedTime = 0;
+            swIsRunning = false;
+            lapCount = 0;
+            document.getElementById('sw-display').textContent = '00:00.00';
+            
+            const startBtn = document.getElementById('sw-start-btn');
+            startBtn.textContent = '시작';
+            startBtn.className = 'w-24 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold rounded-xl shadow transition active:scale-95';
+            
+            const lapBtn = document.getElementById('sw-lap-btn');
+            lapBtn.disabled = true;
+            lapBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            document.getElementById('sw-laps').innerHTML = '';
+        }
+
+        // 5. 타이머 로직
+        let timerInterval = null;
+        let timerRemainingSec = 0;
+        let timerIsRunning = false;
+
+        function toggleTimer() {
+            const startBtn = document.getElementById('timer-start-btn');
+            const inputs = document.getElementById('timer-inputs');
+            const display = document.getElementById('timer-display');
+
+            if (timerIsRunning) {
+                // 일시정지
+                clearInterval(timerInterval);
+                timerIsRunning = false;
+                startBtn.textContent = '시작';
+                startBtn.className = 'w-28 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold rounded-xl shadow transition active:scale-95';
+            } else {
+                // 시작
+                if (timerRemainingSec <= 0) {
+                    const min = parseInt(document.getElementById('timer-min').value) || 0;
+                    const sec = parseInt(document.getElementById('timer-sec').value) || 0;
+                    timerRemainingSec = (min * 60) + sec;
+                }
+
+                if (timerRemainingSec <= 0) return;
+
+                inputs.classList.add('hidden');
+                display.classList.remove('hidden');
+                updateTimerDisplay();
+
+                timerInterval = setInterval(() => {
+                    timerRemainingSec--;
+                    updateTimerDisplay();
+
+                    if (timerRemainingSec <= 0) {
+                        clearInterval(timerInterval);
+                        timerIsRunning = false;
+                        alert('⏰ 설정한 타이머 시간이 종료되었습니다!');
+                        resetTimer();
+                    }
+                }, 1000);
+
+                timerIsRunning = true;
+                startBtn.textContent = '정지';
+                startBtn.className = 'w-28 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold rounded-xl shadow transition active:scale-95';
+            }
+        }
+
+        function updateTimerDisplay() {
+            const m = String(Math.floor(timerRemainingSec / 60)).padStart(2, '0');
+            const s = String(timerRemainingSec % 60).padStart(2, '0');
+            document.getElementById('timer-display').textContent = `${m}:${s}`;
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timerRemainingSec = 0;
+            timerIsRunning = false;
+
+            document.getElementById('timer-inputs').classList.remove('hidden');
+            document.getElementById('timer-display').classList.add('hidden');
+
+            const startBtn = document.getElementById('timer-start-btn');
+            startBtn.textContent = '시작';
+            startBtn.className = 'w-28 py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-bold rounded-xl shadow transition active:scale-95';
+        }
+    </script>
+</body>
+</html>
